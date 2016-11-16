@@ -1,0 +1,110 @@
+package controller;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
+
+public class SD {
+
+    static double res;
+    static int id ;
+
+    public SD() {
+    }
+    public static Connection con = null;
+
+    public static void Conectar() {
+        System.out.println("Conectando ao banco...");
+        try {
+            Class.forName("com.mysql.jdbc.Driver");
+            con = DriverManager.getConnection("jdbc:mysql://127.0.0.1/basedados", "root", "pass");
+            System.out.println("Conectado.");
+        } catch (ClassNotFoundException ex) {
+            System.out.println("Classe não encontrada, adicione o driver nas bibliotecas.");
+           Logger.getLogger(SD.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (SQLException erro) {
+            System.out.println("Erro: " + erro);
+            throw new RuntimeException(erro);
+        }
+    }
+
+    public String Retirar() {
+        Conectar();
+        
+        String nome = "Fillipe e Hudson";
+        String expressao = null;
+        List<String> x = new ArrayList<>();
+        try {
+            PreparedStatement ps = con.prepareStatement("{call retira_exp(?)}");
+            ps.setString(1, nome);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+               x.add(rs.getString(2));
+               id = Integer.parseInt(rs.getString(1));
+               
+            }
+           // for (String exp : x) {
+           // }
+        } catch (SQLException e) {
+            System.out.println("Erro: " + e);
+        }
+        expressao = x.get(0);
+        
+        
+        return expressao;
+        
+    }
+
+
+    public static double Calcular() throws ScriptException {
+        SD obj = new SD();
+        String expr = obj.Retirar();
+        System.out.println("Expressao: " + expr);
+        
+       //double a = Double.parseDouble(expr);
+        ScriptEngineManager factory = new ScriptEngineManager();
+                ScriptEngine engine = factory.getEngineByName("JavaScript");
+                
+        double res = Double.parseDouble(engine.eval(expr).toString());
+                    String sql = "CALL entrega_res('  " + 1 + "  ',' " + res + "'); ";
+                    
+        
+
+        
+        
+        return res;
+    }
+
+    public void EntregaResultado() throws ScriptException {
+        
+        Double result = Calcular();
+        System.out.println("Resultado: " + result);
+        try {
+            PreparedStatement pstm = con.prepareStatement("{call entrega_res(?,?)}");
+            pstm.setInt(1, id);
+            pstm.setDouble(2, result);
+            pstm.executeUpdate();
+
+        } catch (SQLException e) {
+            System.out.println("Erro: " + e);
+        }
+    }
+
+    public static void main(String[] args) throws ScriptException {
+       // SD.Conectar();
+        SD sd = new SD();
+        sd.EntregaResultado();
+
+    }
+    
+}
